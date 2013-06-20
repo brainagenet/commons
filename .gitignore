@@ -4,3 +4,7 @@
 *.jar
 *.war
 *.ear
+/mybatis-spring-paging/mybatis-spring-paging/.project
+/mybatis-spring-paging/mybatis-spring-paging/.settings
+/mybatis-spring-paging/mybatis-spring-paging/target
+/mybatis-spring-paging/mybatis-spring-paging/.classpath
