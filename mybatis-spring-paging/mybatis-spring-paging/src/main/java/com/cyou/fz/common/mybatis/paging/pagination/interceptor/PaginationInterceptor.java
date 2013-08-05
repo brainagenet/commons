@@ -30,7 +30,7 @@ import com.cyou.fz.common.spring.SpringContextAware;
  * 
  * @since JDK 1.5
  * @version 1.0 2012-12-15
- * @author zhufu
+ * @author fuzhu
  */
 @Intercepts({ @Signature(type = Executor.class, method = "query", args = {
 		MappedStatement.class, Object.class, RowBounds.class,
@@ -47,9 +47,6 @@ public class PaginationInterceptor extends BaseInterceptor {
 	@Override
 	public Object intercept(Invocation invocation) throws Throwable {
 		int totPage;
-		long begin = System.currentTimeMillis();
-		long beginCount = 0;
-		long endCount = 0;
 		LOGGER.debug("Pagination Interceptor begin.");
 		final MappedStatement mappedStatement = (MappedStatement) invocation
 				.getArgs()[0];
@@ -57,6 +54,10 @@ public class PaginationInterceptor extends BaseInterceptor {
 		// 如果没有传参数 认为不是分页查询
 		if (mappedStatement.getId().matches(_SQL_PATTERN) && parameter != null) { // 拦截需要分页的SQL
 			BoundSql boundSql = mappedStatement.getBoundSql(parameter);
+			Object parameterObject = boundSql.getParameterObject();
+			// 添加参数sql参数值generateSql到传入参数中，分页查询一定是map参数传入
+			HashMap<String, Object> parameterMap = new HashMap<String, Object>(
+					(HashMap<String, Object>) parameterObject);
 			List<ParameterMapping> pmList = boundSql.getParameterMappings();
 			String originalSql = boundSql.getSql().trim();
 			// 从原生sql语句替换掉问号后的sql
@@ -71,8 +72,12 @@ public class PaginationInterceptor extends BaseInterceptor {
 				valueString.append('}');
 				generateSql = generateSql.replaceFirst("\\?",
 						valueString.toString());
+				// 处理由mybatis生成的特殊参数，比如foreach语句替换出来的东西_fr
+				Object value = boundSql.getAdditionalParameter(p);
+				if (value != null) {
+					parameterMap.put(p, value);
+				}
 			}
-			Object parameterObject = boundSql.getParameterObject();
 			if (boundSql.getSql() == null || "".equals(boundSql.getSql()))
 				return null;
 
@@ -96,14 +101,10 @@ public class PaginationInterceptor extends BaseInterceptor {
 				// 得到总记录数
 				LOGGER.debug("分页：计算总记录数 Begin...");
 				if (totPage == 0) {
-					beginCount = System.currentTimeMillis();
-					// 添加参数sql参数值generateSql到传入参数中，分页查询一定是map参数传入
-					HashMap<String, Object> parameterMap = (HashMap<String, Object>) parameterObject;
 					parameterMap.put("sql", generateSql);
 					pagingDao = SpringContextAware.getBean(IPagingDao.class);
 					totPage = pagingDao.count(parameterMap);
-					endCount = System.currentTimeMillis();
-					// System.out.println(totPage);
+					LOGGER.debug("总记录数:{}", totPage);
 				}
 				LOGGER.debug("分页：计算总记录数 End.");
 
@@ -125,21 +126,24 @@ public class PaginationInterceptor extends BaseInterceptor {
 						mappedStatement.getConfiguration(), pageSql,
 						boundSql.getParameterMappings(),
 						boundSql.getParameterObject());
+				//  FIXME 考虑使用反射方式强制取出metaParameters设置到newBounSql里
+				for (ParameterMapping parameterMapping : pmList) {
+					// 替换元信息
+					String p = parameterMapping.getProperty();
+					Object value = boundSql.getAdditionalParameter(p);
+					if (value != null) {
+						newBoundSql.setAdditionalParameter(p, value);
+					}
+				}
+
 				MappedStatement newMs = copyFromMappedStatement(
 						mappedStatement, new BoundSqlSqlSource(newBoundSql));
 
 				invocation.getArgs()[0] = newMs;
 			}
 		}
-		long end = System.currentTimeMillis();
-		LOGGER.debug("分页总共耗时: {}, count耗时: {}", (end - begin),
-				(endCount - beginCount));
-		// System.out.println("intercept : " + (end - begin));
 		LOGGER.debug("Pagination Interceptor finish.");
-		long beginInvoc = System.currentTimeMillis();
 		Object o = invocation.proceed();
-		long endInvoc = System.currentTimeMillis();
-		LOGGER.debug("分页 查询 耗时: {}", endInvoc - beginInvoc);
 		return o;
 	}
 
