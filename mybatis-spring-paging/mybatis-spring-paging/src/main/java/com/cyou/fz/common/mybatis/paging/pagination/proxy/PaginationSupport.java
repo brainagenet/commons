@@ -34,5 +34,33 @@ public class PaginationSupport<E> extends Pagination {
 	public void setDatas(List<E> datas){
 		this.datas = datas;
 	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("PaginationSupport [datas=");
+		builder.append(datas);
+		builder.append(", pageSize=");
+		builder.append(pageSize);
+		builder.append(", pageNo=");
+		builder.append(pageNo);
+		builder.append(", totalPages=");
+		builder.append(totalPages);
+		builder.append(", totalHit=");
+		builder.append(totalHit);
+		builder.append(", pageStartRow=");
+		builder.append(pageStartRow);
+		builder.append(", pageEndRow=");
+		builder.append(pageEndRow);
+		builder.append(", next=");
+		builder.append(isNext());
+		builder.append(", previous=");
+		builder.append(isPrevious());
+		builder.append("]");
+		return builder.toString();
+	}
     
 }

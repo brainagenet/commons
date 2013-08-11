@@ -26,6 +26,6 @@ public interface IPagingDao {
 	 * @return 总数
 	 * @author zhufu 2013-6-8 下午12:14:09 动作:新建
 	 */
-	@Select(value = "select count(1) from (${sql})")
+	@Select(value = "select count(1) from (${sql}) as t")
 	int count(Map<String, Object> param);
 }
